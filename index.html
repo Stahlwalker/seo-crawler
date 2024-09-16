@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Desktop Web Crawler</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+        }
+
+        #urlInput {
+            width: 70%;
+            padding: 10px;
+            margin-right: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        button {
+            padding: 10px 15px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #2980b9;
+        }
+
+        button:disabled {
+            background-color: #bdc3c7;
+            cursor: not-allowed;
+        }
+
+        #results {
+            margin-top: 20px;
+        }
+
+        .result-item {
+            background-color: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 15px;
+            margin-bottom: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .result-item p {
+            margin: 5px 0;
+        }
+
+        .result-item .url {
+            color: #2980b9;
+            font-weight: bold;
+        }
+
+        .result-item .status {
+            color: #27ae60;
+        }
+
+        .result-item .title {
+            font-style: italic;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Desktop Web Crawler</h1>
+    <div>
+        <input type="text" id="urlInput" placeholder="Enter URL">
+        <button id="startButton">Start Crawling</button>
+        <button id="pauseButton" disabled>Pause</button>
+    </div>
+    <div id="results"></div>
+
+    <script>
+        console.log('Script starting');
+        console.log('window.electron:', window.electron);
+
+        let ipcRenderer;
+        if (window.electron && window.electron.ipcRenderer) {
+            console.log('Using exposed ipcRenderer');
+            ipcRenderer = window.electron.ipcRenderer;
+        } else {
+            console.error('window.electron.ipcRenderer is not available');
+            // Provide a mock implementation for debugging
+            ipcRenderer = {
+                send: (channel, data) => console.log(`Mock send: ${channel}`, data),
+                on: (channel, func) => console.log(`Mock on: ${channel}`)
+            };
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('DOM fully loaded');
+            const urlInput = document.getElementById('urlInput');
+            const startButton = document.getElementById('startButton');
+            const pauseButton = document.getElementById('pauseButton');
+            const results = document.getElementById('results');
+
+            startButton.addEventListener('click', () => {
+                const url = urlInput.value;
+                if (url) {
+                    results.innerHTML = '';
+                    ipcRenderer.send('start-crawling', url);
+                    pauseButton.disabled = false;
+                    console.log('Crawling started for URL:', url);
+                } else {
+                    console.log('No URL entered');
+                }
+            });
+
+            ipcRenderer.on('crawl-result', (data) => {
+                console.log('Crawl result received:', data);
+                const resultDiv = document.createElement('div');
+                resultDiv.className = 'result-item';
+                resultDiv.innerHTML = `
+                    <p class="url">URL: ${data.url}</p>
+                    <p class="status">Status: ${data.status}</p>
+                    <p class="title">Title: ${data.title}</p>
+                `;
+                results.appendChild(resultDiv);
+            });
+
+            ipcRenderer.on('crawl-error', (data) => {
+                console.error('Crawl error:', data);
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'result-item error';
+                errorDiv.innerHTML = `<p>Error crawling ${data.url}: ${data.error}</p>`;
+                results.appendChild(errorDiv);
+            });
+
+            ipcRenderer.on('crawl-results', (results) => {
+                console.log('Crawl results received:', results);
+                results.forEach(data => {
+                    const resultDiv = document.createElement('div');
+                    resultDiv.className = 'result-item';
+                    resultDiv.innerHTML = `
+                        <p class="url">URL: ${data.url}</p>
+                        <p class="status">Status: ${data.status}</p>
+                        <p class="title">Title: ${data.title}</p>
+                    `;
+                    results.appendChild(resultDiv);
+                });
+            });
+        });
+
+        console.log('Script loaded');
+    </script>
+</body>
+
+</html>
+
+<!-- How to run this app:
+1. Make sure you have Node.js and npm (Node Package Manager) installed on your system.
+2. Open a terminal or command prompt and navigate to the project directory.
+3. Run `npm install` to install the required dependencies.
+4. Start the app by running `npm start` or `electron .` (depending on how the start script is configured in package.json).
+5. The app should launch, displaying the Desktop Crawler interface.
+6. Enter a URL in the input field and click "Start Crawling" to begin crawling the website.
+7. Use the "Pause" button to pause/resume the crawling process as needed.
+8. Results will be displayed in the app window as the crawler processes each URL.
+-->
